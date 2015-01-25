@@ -123,7 +123,6 @@ class @MandrillAce
         @setMode('ace/mode/xml')
 
 
-
     ###
     ACE-SPECIFIC STUFF BELOW
     ###
@@ -216,6 +215,9 @@ class @MandrillAce
         @ensureDeps('focus')
         @deps['focus'].depend()
         @ace?.isFocused()
+
+    setFocus: ->
+        @ace.focus()
 
 
 MandrillAce = @MandrillAce
