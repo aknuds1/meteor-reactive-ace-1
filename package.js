@@ -21,6 +21,7 @@ Package.onUse(function(api) {
     api.versionsFrom('METEOR@0.9.1');
     api.use("coffeescript");
     api.use("standard-app-packages");
+    api.use("jag:pince");
     acePath = path.join(packagePath, 'ace-builds', 'src-min');
     fs.readdirSync(
         acePath

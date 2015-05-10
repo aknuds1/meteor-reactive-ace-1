@@ -82,29 +82,28 @@ ACE_MODES = {
     yaml:       ["YAML"         , "yaml"]
 }
 
-
-
-
-
-
 # Write your package code here!
 class @MandrillAce
     constructor: (editorId)->
-        @id = editorId
-        @_originalValue = ''
-        @deps = {}
-        @_attachAce()
+      @logger = new Logger("MandrillAce##{editorId}")
+      @logger.debug("Instantiating...")
+      @id = editorId
+      @_originalValue = ''
+      @deps = {}
+      @logger.debug("Instantiated")
 
     ensureDeps: (key)->
-        @deps[key] ?= new Tracker.Dependency
+      if !@deps[key]?
+        @logger.debug("Installing '#{key}' in @deps")
+      @deps[key] ?= new Tracker.Dependency
 
 
     @__live_instance__: null
 
-    _attachAce: ()->
-        try
-            @ace = ace.edit @id
-            @setupEvents()
+    attachAce: ()->
+      @ace = ace.edit @id
+      @setupEvents()
+      @logger.debug("Attached ACE successfully:", @ace)
 
     @getInstance: ->
         @__live_instance__ ?= new MandrillAce("mandrill_ace")
@@ -155,13 +154,17 @@ class @MandrillAce
         @ace?.getValue()
 
     setValue: (newValue, cursorPos)->
-        @ensureDeps "value"
-        previousValue = @ace?.getValue()
-        if previousValue isnt newValue
-            @ace?.setValue newValue, cursorPos
-            @_originalValue = newValue
-            @deps["value"].changed()
-            @deps["hasChanges"].changed()
+      @logger.debug("Setting value #{newValue}")
+      @ensureDeps "value"
+      @ensureDeps "hasChanges"
+      previousValue = @ace?.getValue()
+      if previousValue isnt newValue
+        @logger.debug("Value has changed")
+        @ace?.setValue newValue, cursorPos
+        @_originalValue = newValue
+        @logger.debug("Invoking deps", @deps)
+        @deps["value"].changed()
+        @deps["hasChanges"].changed()
 
     hasChanges: ->
         @ensureDeps 'hasChanges'
@@ -217,7 +220,8 @@ class @MandrillAce
         @ace?.isFocused()
 
     setFocus: ->
-        @ace.focus()
+      @logger.debug('Giving ACE focus')
+      @ace.focus()
 
 
 MandrillAce = @MandrillAce
