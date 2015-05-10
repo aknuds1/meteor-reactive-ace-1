@@ -102,7 +102,7 @@ class @MandrillAce
     @setupEvents()
     @_setTheme()
     @_setMode()
-    @logger.debug("Attached ACE successfully:", @ace)
+    @logger.debug("Attached Ace successfully:", @ace)
 
   # Attempts to detect and set the appropriate mode in ace given a file path.
   detectMode: (path)->
@@ -213,7 +213,7 @@ class @MandrillAce
     @ace?.isFocused()
 
   setFocus: ->
-    @logger.debug('Giving ACE focus')
+    @logger.debug('Giving Ace focus')
     @ace.focus()
 
 MandrillAce = @MandrillAce
