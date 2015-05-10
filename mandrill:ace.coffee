@@ -84,144 +84,136 @@ ACE_MODES = {
 
 # Write your package code here!
 class @MandrillAce
-    constructor: (editorId)->
-      @logger = new Logger("MandrillAce##{editorId}")
-      @logger.debug("Instantiating...")
-      @id = editorId
-      @_originalValue = ''
-      @deps = {}
-      @logger.debug("Instantiated")
+  constructor: (editorId)->
+    @logger = new Logger("MandrillAce##{editorId}")
+    @logger.debug("Instantiating...")
+    @id = editorId
+    @_originalValue = ''
+    @deps = {}
+    @logger.debug("Instantiated")
 
-    ensureDeps: (key)->
-      if !@deps[key]?
-        @logger.debug("Installing '#{key}' in @deps")
-      @deps[key] ?= new Tracker.Dependency
+  ensureDeps: (key)->
+    if !@deps[key]?
+      @logger.debug("Installing '#{key}' in @deps")
+    @deps[key] ?= new Tracker.Dependency
 
+  attachAce: ()->
+    @ace = ace.edit @id
+    @setupEvents()
+    @_setTheme()
+    @_setMode()
+    @logger.debug("Attached ACE successfully:", @ace)
 
-    @__live_instance__: null
+  # Attempts to detect and set the appropriate mode in ace given a file path.
+  detectMode: (path)->
+      extension = _.last _.last(path.split('/')).split('.')
+      for mode,extensions of ACE_MODES
+          patt = new RegExp('^\\\.(' + extensions[1] + ')$')
+          if patt.test('.' + extension)
+              @setMode 'ace/mode/' + mode
+              return
 
-    attachAce: ()->
-      @ace = ace.edit @id
-      @setupEvents()
-      @logger.debug("Attached ACE successfully:", @ace)
+      @setMode('ace/mode/xml')
 
-    @getInstance: ->
-        @__live_instance__ ?= new MandrillAce("mandrill_ace")
-        @__live_instance__
+  ###
+  ACE-SPECIFIC STUFF BELOW
+  ###
 
+  setupEvents: ->
+      self = @
+      @ace?.on "change", ->
+          self.ensureDeps "value"
+          self.ensureDeps "hasChanges"
+          self.deps["value"].changed()
+          self.deps["hasChanges"].changed()
+      @ace?.on "focus", ->
+          self.ensureDeps "focus"
+          self.deps["focus"].changed()
+      @ace?.on "blur", ->
+          self.ensureDeps "focus"
+          self.deps["focus"].changed()
+      @ace?.getSession().on "changeMode", ->
+          self.ensureDeps "mode"
+          self.deps['mode'].changed()
 
-    # Attempts to detect and set the appropriate mode in ace given a file path.
-    detectMode: (path)->
-        extension = _.last _.last(path.split('/')).split('.')
-        for mode,extensions of ACE_MODES
-            patt = new RegExp('^\\\.(' + extensions[1] + ')$')
-            if patt.test('.' + extension)
-                @setMode 'ace/mode/' + mode
-                return
-
-        @setMode('ace/mode/xml')
-
-
-    ###
-    ACE-SPECIFIC STUFF BELOW
-    ###
-
-
-
-
-    setupEvents: ->
-        self = @
-        @ace?.on "change", ->
-            self.ensureDeps "value"
-            self.ensureDeps "hasChanges"
-            self.deps["value"].changed()
-            self.deps["hasChanges"].changed()
-        @ace?.on "focus", ->
-            self.ensureDeps "focus"
-            self.deps["focus"].changed()
-        @ace?.on "blur", ->
-            self.ensureDeps "focus"
-            self.deps["focus"].changed()
-        @ace?.getSession().on "changeMode", ->
-            self.ensureDeps "mode"
-            self.deps['mode'].changed()
-
-
-
-    value: ->
-        @ensureDeps "value"
-        @deps['value'].depend()
-        @ace?.getValue()
-
-    setValue: (newValue, cursorPos)->
-      @logger.debug("Setting value #{newValue}")
+  value: ->
       @ensureDeps "value"
-      @ensureDeps "hasChanges"
-      previousValue = @ace?.getValue()
-      if previousValue isnt newValue
-        @logger.debug("Value has changed")
-        @ace?.setValue newValue, cursorPos
-        @_originalValue = newValue
-        @logger.debug("Invoking deps", @deps)
-        @deps["value"].changed()
-        @deps["hasChanges"].changed()
+      @deps['value'].depend()
+      @ace?.getValue()
 
-    hasChanges: ->
-        @ensureDeps 'hasChanges'
-        @deps['hasChanges'].depend()
-        @_originalValue != @ace?.getValue()
+  setValue: (newValue, cursorPos)->
+    @logger.debug("Setting value #{newValue}")
+    @ensureDeps "value"
+    @ensureDeps "hasChanges"
+    previousValue = @ace?.getValue()
+    if previousValue isnt newValue
+      @logger.debug("Value has changed")
+      @ace?.setValue newValue, cursorPos
+      @_originalValue = newValue
+      @logger.debug("Invoking deps", @deps)
+      @deps["value"].changed()
+      @deps["hasChanges"].changed()
 
-    theme: ->
-        @ensureDeps 'theme'
-        @deps['theme'].depend()
-        @ace?.getTheme()
+  hasChanges: ->
+      @ensureDeps 'hasChanges'
+      @deps['hasChanges'].depend()
+      @_originalValue != @ace?.getValue()
 
-    # If you're going to set the theme and you expect it to be reactive,
-    # use this method instead of calling setTheme on ace directly. Ace doesn't
-    # appear to have an event that indicates the theme changed.
-    setTheme: (aTheme)->
-        @ensureDeps 'theme'
-        previousValue = @ace?.getTheme()
-        @ace?.setTheme aTheme
-        if previousValue isnt aTheme
-            @deps['theme'].changed()
+  theme: ->
+    @ensureDeps 'theme'
+    @deps['theme'].depend()
+    @ace?.getTheme()
 
+  # If you're going to set the theme and you expect it to be reactive,
+  # use this method instead of calling setTheme on ace directly. Ace doesn't
+  # appear to have an event that indicates the theme changed.
+  setTheme: (aTheme)->
+    @_theme = aTheme
+    @_setTheme()
 
-    mode: ->
-        @ensureDeps 'mode'
-        @deps['mode'].depend()
-        @ace?.getSession().getMode()
+  _setTheme: ->
+    @ensureDeps 'theme'
+    previousValue = @ace?.getTheme()
+    @ace?.setTheme @_theme
+    if previousValue isnt @_theme
+      @deps['theme'].changed()
 
-    setMode: (aMode)->
-        @ensureDeps 'mode'
-        previousValue = @ace?.getSession().getMode()
-        @ace?.getSession().setMode aMode
-        if previousValue isnt aMode
-            @deps['mode'].changed()
+  mode: ->
+    @ensureDeps 'mode'
+    @deps['mode'].depend()
+    @ace?.getSession().getMode()
 
-    readOnly: ->
-        @ensureDeps 'readOnly'
-        @deps['readOnly'].depend()
-        @ace?.getReadOnly()
+  setMode: (aMode)->
+    @_mode = aMode
+    @_setMode()
 
-    setReadOnly: (aBool)->
-        @ensureDeps 'readOnly'
-        previousValue = @ace?.getReadOnly()
-        @ace?.setReadOnly aBool
-        if previousValue isnt aBool
-            @deps['readOnly'].changed()
+  _setMode: ->
+    @ensureDeps 'mode'
+    previousValue = @ace?.getSession().getMode()
+    @ace?.getSession().setMode @_mode
+    if previousValue isnt @_mode
+      @deps['mode'].changed()
 
+  readOnly: ->
+    @ensureDeps 'readOnly'
+    @deps['readOnly'].depend()
+    @ace?.getReadOnly()
 
+  setReadOnly: (aBool)->
+    @ensureDeps 'readOnly'
+    previousValue = @ace?.getReadOnly()
+    @ace?.setReadOnly aBool
+    if previousValue isnt aBool
+        @deps['readOnly'].changed()
 
-    # r/o states
-    isFocused: ->
-        @ensureDeps('focus')
-        @deps['focus'].depend()
-        @ace?.isFocused()
+  # r/o states
+  isFocused: ->
+    @ensureDeps('focus')
+    @deps['focus'].depend()
+    @ace?.isFocused()
 
-    setFocus: ->
-      @logger.debug('Giving ACE focus')
-      @ace.focus()
-
+  setFocus: ->
+    @logger.debug('Giving ACE focus')
+    @ace.focus()
 
 MandrillAce = @MandrillAce
