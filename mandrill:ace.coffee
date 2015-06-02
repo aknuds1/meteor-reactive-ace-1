@@ -142,7 +142,7 @@ class @MandrillAce
       @ace?.getValue()
 
   setValue: (newValue, cursorPos)->
-    @logger.debug("Setting value #{newValue}")
+    # @logger.debug("Setting value #{newValue}")
     @ensureDeps "value"
     @ensureDeps "hasChanges"
     previousValue = @ace?.getValue()
