@@ -5,7 +5,6 @@ Package.describe({
     name: "mandrill:ace"
 });
 
-
 path = Npm.require("path");
 fs = Npm.require("fs");
 packagePath = path.resolve(".")
@@ -13,8 +12,6 @@ if ( fs.existsSync(path.join(packagePath, 'packages')) ) {
     // We're live testing, not publishing, so we need to alter the path
     packagePath = path.join(packagePath, 'packages', 'mandrill:ace')
 }
-
-
 
 Package.onUse(function(api) {
     aceBuildPath = path.join('ace-builds', 'src')
@@ -33,7 +30,6 @@ Package.onUse(function(api) {
             );
         }
     });
-
 
     snippetPath = path.join(acePath, 'snippets');
     fs.readdirSync(
